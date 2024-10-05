@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "dkg.js": "^8.0.0-alpha.0"
+  }
+}
