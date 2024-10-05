@@ -1,0 +1,13 @@
+[Unit]
+Description=Asset Spam
+
+[Service]
+Type=simple
+WorkingDirectory=/root/asset-spam
+ExecStart=/root/asset-spam/star-asset-spam.sh
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
