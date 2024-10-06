@@ -1,10 +1,10 @@
 const fs = require('fs');
 const path = require('path');
-const configPath = path.resolve(__dirname, './config');
+const { setTimeout } = require('timers/promises');
+
+const configPath = path.resolve(__dirname, 'config');
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-const workers = config.workers;
-const host = config.host;
-const cycle_time_sec = config.cycle_time_sec;
+const { workers, host, cycle_time_sec } = config;
 const DKGClient = require("dkg.js");
 
 const node_options = {
@@ -17,54 +17,62 @@ const node_options = {
 
 const dkg = new DKGClient(node_options);
 
-// Function to start creating pending uploads for each blockchain
-async function start() {
-  try {
-    // Keep starting the process every 10 seconds
-    setTimeout(async () => {
-      await start();
-    }, cycle_time_sec * 1000);
+async function createWorkerAsset(worker) {
+  const dkg_options = {
+    ...node_options,
+    epochsNum: 1,
+    maxNumberOfRetries: 30,
+    frequency: 2,
+    contentType: "all",
+    blockchain: {
+      name: "base:84532",
+      publicKey: worker.public_key,
+      privateKey: worker.private_key,
+      handleNotMinedError: true,
+    },
+  };
 
-    // Create asset for each worker concurrently
-    for (const worker of workers) {
-      console.log(`${worker.name} wallet ${worker.public_key}: Creating next asset on base:84532.`);
-      
-      // Set options for each worker
-      let dkg_options = {
-        environment: "testnet",
-        epochsNum: 1,
-        maxNumberOfRetries: 30,
-        frequency: 2,
-        contentType: "all",
-        blockchain: {
-          name: "base:84532",
-          publicKey: worker.public_key,
-          privateKey: worker.private_key,
-          handleNotMinedError: true,
-        },
-      };
-
-      let data_obj = {
-        public: {
-          "@context": "https://schema.org",
-          "@type": "CreativeWork",
-          "name": "asset",
-          "description": "asset description",
-        }
-      };
-
-      // Create the asset asynchronously without waiting for completion
-      dkg.asset.create(data_obj, dkg_options)
-        .then((result) => {
-          console.log(`${worker.name} wallet ${worker.public_key}: Created UAL: ${result.UAL}.`);
-        })
-        .catch((error) => {
-          console.error(`${worker.name} wallet ${worker.public_key}: Error creating asset:`, error);
-        });
+  const data_obj = {
+    public: {
+      "@context": "https://schema.org",
+      "@type": "CreativeWork",
+      "name": "asset",
+      "description": "asset description",
     }
+  };
+
+  try {
+    const result = await dkg.asset.create(data_obj, dkg_options);
+    console.log(`${worker.name} wallet ${worker.public_key}: Created UAL: ${result.UAL}.`);
+    return result.UAL;
   } catch (error) {
-    console.error("Error publishing dataset:", error);
+    console.error(`${worker.name} wallet ${worker.public_key}: Error creating asset:`, error);
+    return null;
   }
 }
 
+async function processWorkers() {
+  await Promise.all(workers.map(async (worker) => {
+    console.log(`${worker.name} wallet ${worker.public_key}: Starting asset creation.`);
+    return createWorkerAsset(worker);
+  }));
+}
+
+/**
+ * Main function to cycle through the worker processes.
+ */
+async function start() {
+  try {
+    await processWorkers();
+    // Here's where the correction is made. Ensure you're passing a number for delay:
+    await setTimeout(cycle_time_sec * 1000); // Wait for cycle_time_sec before starting again
+    start(); // Directly call start to schedule the next cycle
+  } catch (error) {
+    console.error("Error in start function:", error);
+    await setTimeout(cycle_time_sec * 1000); // Schedule next run even if an error occurred
+    start(); // Retry starting the process
+  }
+}
+
+// Start the process
 start();

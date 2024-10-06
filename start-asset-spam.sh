@@ -4,6 +4,6 @@ cd ~/asset-spam/
 
 while true
 do
-    nodemon start
+    node index.js
     sleep 1
 done
