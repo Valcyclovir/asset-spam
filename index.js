@@ -56,7 +56,7 @@ async function createWorkerAsset(worker) {
     );
 
     console.log(`Getting UAL ${result.UAL}...`)
-    await dkg.asset.get(result.UAL, dkg_options);
+    dkg.asset.get(result.UAL, dkg_options);
     console.log(`Done getting UAL ${result.UAL}...`)
 
     let topic = await randomWords(wordPool);
@@ -81,7 +81,7 @@ async function createWorkerAsset(worker) {
           GROUP BY ?subject ?g
           LIMIT 100  
           `;
-    await dkg.graph.query(query, "SELECT", { graphState: "CURRENT" });
+    dkg.graph.query(query, "SELECT", { graphState: "CURRENT" });
     console.log(`Finish querying word: ${topic}...`)
 
     return result.UAL;
