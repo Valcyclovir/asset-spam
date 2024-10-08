@@ -51,10 +51,16 @@ async function createWorkerAsset(worker) {
 
   try {
     const result = await dkg.asset.create(data_obj, dkg_options);
+    console.log(
+      `${worker.name} wallet ${worker.public_key}: Created UAL: ${result.UAL}.`
+    );
+
+    console.log(`Getting UAL ${result.UAL}...`)
     await dkg.asset.get(result.UAL, dkg_options);
+    console.log(`Done getting UAL ${result.UAL}...`)
 
     let topic = await randomWords(wordPool);
-
+    console.log(`Querying word: ${topic}...`)
     let query = `PREFIX schema: <http://schema.org/>
 
           SELECT ?subject (SAMPLE(?name) AS ?name) (SAMPLE(?description) AS ?description) 
@@ -75,12 +81,9 @@ async function createWorkerAsset(worker) {
           GROUP BY ?subject ?g
           LIMIT 100  
           `;
-
     await dkg.graph.query(query, "SELECT", { graphState: "CURRENT" });
-    
-    console.log(
-      `${worker.name} wallet ${worker.public_key}: Created UAL: ${result.UAL}.`
-    );
+    console.log(`Finish querying word: ${topic}...`)
+
     return result.UAL;
   } catch (error) {
     console.error(
